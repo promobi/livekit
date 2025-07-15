@@ -62,6 +62,7 @@ var (
 	promConnections           *prometheus.GaugeVec
 	promForwardLatency        prometheus.Gauge
 	promForwardJitter         prometheus.Gauge
+	promRoomPacketBytes       *prometheus.CounterVec
 
 	promPacketTotalIncomingInitial    prometheus.Counter
 	promPacketTotalIncomingRetransmit prometheus.Counter
@@ -171,6 +172,21 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 		ConstLabels: prometheus.Labels{"node_id": nodeID, "node_type": nodeType.String()},
 	})
 
+	// ─── register per-room byte counter ─────────────────────────────────
+	promRoomPacketBytes = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: livekitNamespace,
+			Subsystem: "room_packet",
+			Name:      "bytes_total",
+			Help:      "Total packet bytes per room",
+			ConstLabels: prometheus.Labels{
+				"node_id":   nodeID,
+				"node_type": nodeType.String(),
+			},
+		},
+		[]string{"room", "direction", "transmission"},
+	)
+
 	prometheus.MustRegister(promPacketTotal)
 	prometheus.MustRegister(promPacketBytes)
 	prometheus.MustRegister(promNackTotal)
@@ -186,6 +202,7 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 	prometheus.MustRegister(promConnections)
 	prometheus.MustRegister(promForwardLatency)
 	prometheus.MustRegister(promForwardJitter)
+	prometheus.MustRegister(promRoomPacketBytes)
 
 	promPacketTotalIncomingInitial = promPacketTotal.WithLabelValues(string(Incoming), transmissionInitial)
 	promPacketTotalIncomingRetransmit = promPacketTotal.WithLabelValues(string(Incoming), transmissionRetransmit)
@@ -245,6 +262,15 @@ func IncrementBytes(direction Direction, count uint64, retransmit bool) {
 			retransmitBytes.Add(count)
 		}
 	}
+}
+
+func IncrementRoomBytes(direction Direction, roomId string, count uint64, retransmit bool) {
+	tx := transmissionInitial
+	if retransmit {
+		tx = transmissionRetransmit
+	}
+
+	promRoomPacketBytes.WithLabelValues(roomId, string(direction), tx).Add(float64(count))
 }
 
 func IncrementRTCP(direction Direction, nack, pli, fir uint32) {

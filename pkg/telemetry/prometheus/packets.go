@@ -69,6 +69,7 @@ var (
 	promForwardLatency        prometheus.Gauge
 	promForwardJitter         prometheus.Gauge
 	promForwardLatencyHist    prometheus.Histogram
+	promRoomPacketBytes       *prometheus.CounterVec
 
 	promPacketTotalIncomingInitial    prometheus.Counter
 	promPacketTotalIncomingRetransmit prometheus.Counter
@@ -196,6 +197,21 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 		},
 	})
 
+	// ─── register per-room byte counter ─────────────────────────────────
+	promRoomPacketBytes = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: livekitNamespace,
+			Subsystem: "room_packet",
+			Name:      "bytes_total",
+			Help:      "Total packet bytes per room",
+			ConstLabels: prometheus.Labels{
+				"node_id":   nodeID,
+				"node_type": nodeType.String(),
+			},
+		},
+		[]string{"room", "direction", "transmission"},
+	)
+
 	prometheus.MustRegister(promPacketTotal)
 	prometheus.MustRegister(promPacketBytes)
 	prometheus.MustRegister(promNackTotal)
@@ -212,6 +228,16 @@ func initPacketStats(nodeID string, nodeType livekit.NodeType) {
 	prometheus.MustRegister(promForwardLatency)
 	prometheus.MustRegister(promForwardJitter)
 	prometheus.MustRegister(promForwardLatencyHist)
+	prometheus.MustRegister(promRoomPacketBytes)
+
+	promPacketTotalIncomingInitial = promPacketTotal.WithLabelValues(string(Incoming), string(TransmissionInitial), "")
+	promPacketTotalIncomingRetransmit = promPacketTotal.WithLabelValues(string(Incoming), string(TransmissionRetransmit), "")
+	promPacketTotalOutgoingInitial = promPacketTotal.WithLabelValues(string(Outgoing), string(TransmissionInitial), "")
+	promPacketTotalOutgoingRetransmit = promPacketTotal.WithLabelValues(string(Outgoing), string(TransmissionRetransmit), "")
+	promPacketBytesIncomingInitial = promPacketBytes.WithLabelValues(string(Incoming), string(TransmissionInitial), "")
+	promPacketBytesIncomingRetransmit = promPacketBytes.WithLabelValues(string(Incoming), string(TransmissionRetransmit), "")
+	promPacketBytesOutgoingInitial = promPacketBytes.WithLabelValues(string(Outgoing), string(TransmissionInitial), "")
+	promPacketBytesOutgoingRetransmit = promPacketBytes.WithLabelValues(string(Outgoing), string(TransmissionRetransmit), "")
 }
 
 func IncrementPackets(country string, direction Direction, count uint64, retransmit bool) {
@@ -250,6 +276,15 @@ func IncrementBytes(country string, direction Direction, count uint64, retransmi
 			retransmitBytes.Add(count)
 		}
 	}
+}
+
+func IncrementRoomBytes(direction Direction, roomId string, count uint64, retransmit bool) {
+	tx := string(TransmissionInitial)
+	if retransmit {
+		tx = string(TransmissionRetransmit)
+	}
+
+	promRoomPacketBytes.WithLabelValues(roomId, string(direction), tx).Add(float64(count))
 }
 
 func IncrementRTCP(country string, direction Direction, nack, pli, fir uint32) {

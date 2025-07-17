@@ -99,22 +99,22 @@ func (t *telemetryService) TrackStats(key StatsKey, stat *livekit.AnalyticsStat)
 				prometheus.RecordJitter(key.country, direction, key.trackSource, key.trackType, stream.Jitter)
 			}
 		}
-	}
-	prometheus.IncrementRTCP(key.country, direction, nacks, plis, firs)
-	prometheus.IncrementPackets(key.country, direction, uint64(packets), false)
-	prometheus.IncrementBytes(key.country, direction, bytes, false)
-	prometheus.IncrementRoomBytes(direction, room.Name, bytes, false)
-	if retransmitPackets != 0 {
-		prometheus.IncrementPackets(key.country, direction, uint64(retransmitPackets), true)
-	}
-	if retransmitBytes != 0 {
-		prometheus.IncrementBytes(key.country, direction, retransmitBytes, true)
-		prometheus.IncrementRoomBytes(direction, room.Name, retransmitBytes, true)
-	}
+		}
+		prometheus.IncrementRTCP(key.country, direction, nacks, plis, firs)
+		prometheus.IncrementPackets(key.country, direction, uint64(packets), false)
+		prometheus.IncrementBytes(key.country, direction, bytes, false)
+		prometheus.IncrementRoomBytes(direction, room.Name, bytes, false)
+		t.incrementRoomBytes(direction, room.Name, bytes)
 
-	if worker, ok := t.getWorker(key.participantID); ok {
-		worker.OnTrackStat(key.trackID, key.streamType, stat)
-	}
+		if retransmitPackets != 0 {
+			prometheus.IncrementPackets(key.country, direction, uint64(retransmitPackets), true)
+		}
+		if retransmitBytes != 0 {
+			prometheus.IncrementBytes(key.country, direction, retransmitBytes, true)
+			prometheus.IncrementRoomBytes(direction, room.Name, retransmitBytes, true)
+			t.incrementRoomBytes(direction, room.Name, retransmitBytes)
+		}
+
 		if worker, ok := t.getWorker(key.participantID); ok {
 			worker.OnTrackStat(key.trackID, key.streamType, stat)
 		}

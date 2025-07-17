@@ -88,12 +88,16 @@ func (t *telemetryService) TrackStats(key StatsKey, stat *livekit.AnalyticsStat)
 		prometheus.IncrementPackets(direction, uint64(packets), false)
 		prometheus.IncrementBytes(direction, bytes, false)
 		prometheus.IncrementRoomBytes(direction, room.Name, bytes, false)
+		t.incrementRoomBytes(direction, room.Name, bytes)
+
 		if retransmitPackets != 0 {
 			prometheus.IncrementPackets(direction, uint64(retransmitPackets), true)
 		}
 		if retransmitBytes != 0 {
 			prometheus.IncrementBytes(direction, retransmitBytes, true)
 			prometheus.IncrementRoomBytes(direction, room.Name, retransmitBytes, true)
+
+			t.incrementRoomBytes(direction, room.Name, retransmitBytes)
 		}
 
 		if worker, ok := t.getWorker(key.participantID); ok {

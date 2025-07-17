@@ -29,6 +29,7 @@ import (
 	"github.com/urfave/cli/v3"
 
 	"github.com/livekit/livekit-server/pkg/rtc"
+	"github.com/livekit/livekit-server/pkg/telemetry"
 	"github.com/livekit/livekit-server/pkg/telemetry/prometheus"
 	"github.com/livekit/protocol/logger"
 
@@ -292,6 +293,10 @@ func startServer(_ context.Context, c *cli.Command) error {
 	}
 
 	if err := prometheus.Init(string(currentNode.NodeID()), currentNode.NodeType()); err != nil {
+		return err
+	}
+
+	if err := telemetry.InitBandwidthTracker(conf); err != nil {
 		return err
 	}
 

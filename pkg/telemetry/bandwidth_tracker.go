@@ -1,4 +1,4 @@
-// Copyright 2023 LiveKit, Inc.
+// Copyright [2025] Arnab Chakraborty.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,12 +17,20 @@ package telemetry
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/livekit/livekit-server/pkg/config"
 	"github.com/livekit/livekit-server/pkg/telemetry/prometheus"
 	"github.com/livekit/protocol/logger"
 	redisLiveKit "github.com/livekit/protocol/redis"
 	"github.com/redis/go-redis/v9"
+)
+
+const (
+	defaultRedisDialTimeout  = 4000 // 4s
+	defaultRedisReadTimeout  = 3000 // 3s
+	defaultRedisWriteTimeout = 3000 // 3s
+	defaultRedisPoolTimeout  = 4000 // 4s
 )
 
 var (
@@ -46,11 +54,34 @@ func InitBandwidthTracker(conf *config.Config) error {
 			return
 		}
 
+		// apply default Redis timeouts if not specified
+		if conf.Redis.DialTimeout == 0 {
+			conf.Redis.DialTimeout = defaultRedisDialTimeout
+		}
+		if conf.Redis.ReadTimeout == 0 {
+			conf.Redis.ReadTimeout = defaultRedisReadTimeout
+		}
+		if conf.Redis.WriteTimeout == 0 {
+			conf.Redis.WriteTimeout = defaultRedisWriteTimeout
+		}
+		if conf.Redis.PoolTimeout == 0 {
+			conf.Redis.PoolTimeout = defaultRedisPoolTimeout
+		}
+
 		// Try to get a Redis client; on error, mark disabled and return it.
 		rc, err := redisLiveKit.GetRedisClient(&conf.Redis)
 		if err != nil {
 			configured, initErr = false, err
 			logger.Errorw("Failed to initialize Redis client even though config provided", err)
+			return
+		}
+
+		// verify connectivity
+		ctxInit, cancel := context.WithTimeout(context.Background(), time.Duration(conf.Redis.DialTimeout))
+		defer cancel()
+		if err := rc.Ping(ctxInit).Err(); err != nil {
+			configured, initErr = false, err
+			logger.Errorw("Redis ping failed", err)
 			return
 		}
 
@@ -76,14 +107,16 @@ func Client() redis.UniversalClient {
 
 // Acts as a switchboard to store incoming or outgoing bytes for the given room.
 func (t *telemetryService) incrementRoomBytes(direction prometheus.Direction, roomName string, bytes uint64) {
-	logger.Debugw("Incrementing room bytes...", "direction", direction, "bytes", bytes)
+	logger.Debugw("Logging room bytes", "direction", direction, "bytes", bytes)
 
 	// if the tracker is not configured then drop the log call
 	if !isBandwidthTrackerConfigured() {
 		return
 	}
 
-	ctx := context.Background()
+	// add a 2s timeout to every call in case it gets stuck
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 
 	if direction == prometheus.Incoming {
 		incrementIncoming(ctx, roomName, bytes)

@@ -99,7 +99,6 @@ func (t *telemetryService) TrackStats(key StatsKey, stat *livekit.AnalyticsStat)
 				prometheus.RecordJitter(key.country, direction, key.trackSource, key.trackType, stream.Jitter)
 			}
 		}
-		}
 		prometheus.IncrementRTCP(key.country, direction, nacks, plis, firs)
 		prometheus.IncrementPackets(key.country, direction, uint64(packets), false)
 		prometheus.IncrementBytes(key.country, direction, bytes, false)

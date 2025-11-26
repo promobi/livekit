@@ -25,6 +25,8 @@ on:
 jobs:
   docker:
     runs-on: ubuntu-latest
+    # Only run on original LiveKit repo, not forks
+    if: github.repository == 'livekit/livekit'
     steps:
       - uses: actions/checkout@v4
       - name: Docker meta

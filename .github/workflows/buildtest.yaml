@@ -24,6 +24,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Only run on original LiveKit repo, not forks (optional - remove if you want tests on your fork)
+    if: github.repository == 'livekit/livekit'
     steps:
       - uses: actions/checkout@v4
       - uses: shogo82148/actions-setup-redis@v1

@@ -18,6 +18,8 @@ concurrency:
 jobs:
   notify-devs:
     runs-on: ubuntu-latest
+    # Only run on original LiveKit repo, not forks
+    if: github.repository == 'livekit/livekit'
     steps:
       - uses: livekit/slack-notifier-action@34d9e973391fe5e4afacba015c4d144eb912e7ea # main
         with:

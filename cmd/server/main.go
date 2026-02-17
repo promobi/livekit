@@ -28,9 +28,7 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/livekit/livekit-server/pkg/rtc"
 	"github.com/livekit/livekit-server/pkg/telemetry"
-	"github.com/livekit/livekit-server/pkg/telemetry/prometheus"
 	"github.com/livekit/protocol/logger"
 	"github.com/livekit/protocol/tracer/jaeger"
 

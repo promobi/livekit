@@ -69,7 +69,7 @@ func (t *telemetryService) TrackStats(roomID livekit.RoomID, _roomName livekit.R
 			direction = prometheus.Outgoing
 		}
 
-		room := t.getRoomDetails(key.participantID)
+		room := t.getRoomDetails(roomID, key.participantID)
 
 		nacks := uint32(0)
 		plis := uint32(0)
@@ -114,7 +114,7 @@ func (t *telemetryService) TrackStats(roomID livekit.RoomID, _roomName livekit.R
 			t.incrementRoomBytes(direction, room.Name, retransmitBytes)
 		}
 
-		if worker, ok := t.getWorker(key.participantID); ok {
+		if worker, ok := t.getWorker(roomID, key.participantID); ok {
 			worker.OnTrackStat(key.trackID, key.streamType, stat)
 		}
 	})

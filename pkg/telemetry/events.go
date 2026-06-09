@@ -591,6 +591,19 @@ func (t *telemetryService) Webhook(ctx context.Context, webhookInfo *livekit.Web
 	})
 }
 
+// returns a livekit.Room with only name and sid filled out
+// returns nil if room is not found
+func (t *telemetryService) getRoomDetails(roomID livekit.RoomID, participantID livekit.ParticipantID) *livekit.Room {
+	if worker, ok := t.getWorker(roomID, participantID); ok {
+		return &livekit.Room{
+			Sid:  string(worker.roomID),
+			Name: string(worker.roomName),
+		}
+	}
+
+	return nil
+}
+
 func newRoomEvent(event livekit.AnalyticsEventType, room *livekit.Room) *livekit.AnalyticsEvent {
 	ev := &livekit.AnalyticsEvent{
 		Type:      event,
